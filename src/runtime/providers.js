@@ -67,16 +67,35 @@ export function buildKitchenImageProvider(runtime) {
       },
     },
     isConfigured: () => true,
-    generateImage: (req) =>
-      fulfillKitchenImageRequest(runtime, req, {
-        scenario: "image.generate",
-        route: "provider:image",
-      }),
-    editImage: (req) =>
-      fulfillKitchenImageRequest(runtime, req, {
-        scenario: "image.edit",
-        route: "provider:image-edit",
-      }),
+    generateImage: async (req) => {
+      const result = await runtime.runScenario({
+        scenario: req?.inputImages?.length ? "image.edit" : "image.generate",
+        prompt: req?.prompt,
+        model: req?.model,
+      });
+      if (result.error) {
+        throw kitchenProviderError(result);
+      }
+      return {
+        images: [stripDataUrl(result.image)],
+        model: req?.model || DEFAULT_IMAGE_MODEL,
+        metadata: {
+          kitchenSink: true,
+          job: result.job,
+          asset: result.image.metadata,
+          provider: IMAGE_PROVIDER_ID,
+          pluginId: PLUGIN_ID,
+          scenarioId: result.scenarioId,
+          route: result.route,
+          request: {
+            prompt: req?.prompt,
+            size: req?.size,
+            aspectRatio: req?.aspectRatio,
+            count: req?.count || 1,
+          },
+        },
+      };
+    },
   };
 }
 
@@ -395,37 +414,6 @@ export function buildKitchenCompactionProvider() {
 
 function pluginConfigPath() {
   return `plugins.${PLUGIN_ID}`;
-}
-
-async function fulfillKitchenImageRequest(runtime, req, { scenario, route }) {
-  const result = await runtime.runScenario({
-    scenario,
-    prompt: req?.prompt,
-    route,
-    model: req?.model,
-  });
-  if (result.error) {
-    throw kitchenProviderError(result);
-  }
-  return {
-    images: [stripDataUrl(result.image)],
-    model: req?.model || DEFAULT_IMAGE_MODEL,
-    metadata: {
-      kitchenSink: true,
-      job: result.job,
-      asset: result.image.metadata,
-      provider: IMAGE_PROVIDER_ID,
-      pluginId: PLUGIN_ID,
-      scenarioId: result.scenarioId,
-      route: result.route,
-      request: {
-        prompt: req?.prompt,
-        size: req?.size,
-        aspectRatio: req?.aspectRatio,
-        count: req?.count || 1,
-      },
-    },
-  };
 }
 
 function kitchenProviderError(result) {

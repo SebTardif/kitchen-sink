@@ -253,7 +253,7 @@ export async function runKitchenScenario(runtime, request = {}) {
     if (failure) {
       return {
         scenarioId: scenario,
-        route: request.route || "provider:image",
+        route: queuedJob.route,
         job: transitionKitchenJob(runningJob, "failed", runtime.now(), {
           error: failure,
           progressPercent: 100,
@@ -282,7 +282,7 @@ export async function runKitchenScenario(runtime, request = {}) {
     });
     return {
       scenarioId: scenario,
-      route: request.route || "provider:image",
+      route: queuedJob.route,
       job: completedJob,
       image,
     };
